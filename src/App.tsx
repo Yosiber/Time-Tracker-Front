@@ -3,10 +3,11 @@ import type { User } from './components/UserSelect';
 import UserSelect from './components/UserSelect';
 import ActivityManagement from './components/ActivityManagement';
 import Dashboard from './components/Dashboard';
+import KaizenHub from './components/KaizenHub';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'activities' | 'dashboard'>('activities');
+  const [activeTab, setActiveTab] = useState<'activities' | 'dashboard' | 'kaizen'>('activities');
 
   if (!currentUser) {
     return (
@@ -70,23 +71,31 @@ function App() {
 
           {/* Navigation */}
           <nav className="flex items-center gap-1">
-            {(['activities', 'dashboard'] as const).map((tab) => (
+            {([
+              { key: 'activities', label: 'Actividades' },
+              { key: 'dashboard',  label: 'Dashboard'   },
+              { key: 'kaizen',     label: '♾️ Kaizen'   },
+            ] as const).map(({ key, label }) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
+                key={key}
+                onClick={() => setActiveTab(key)}
                 className="relative px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
                 style={{
-                  color: activeTab === tab ? '#c084fc' : 'rgba(148,163,184,0.8)',
-                  background: activeTab === tab ? 'rgba(168,85,247,0.15)' : 'transparent',
+                  color: activeTab === key
+                    ? key === 'kaizen' ? '#67e8f9' : '#c084fc'
+                    : 'rgba(148,163,184,0.8)',
+                  background: activeTab === key
+                    ? key === 'kaizen' ? 'rgba(6,182,212,0.15)' : 'rgba(168,85,247,0.15)'
+                    : 'transparent',
                 }}
               >
-                {activeTab === tab && (
+                {activeTab === key && (
                   <span className="absolute inset-0 rounded-lg" style={{
-                    background: 'rgba(168,85,247,0.08)',
-                    boxShadow: 'inset 0 0 0 1px rgba(168,85,247,0.3)'
+                    background: key === 'kaizen' ? 'rgba(6,182,212,0.08)' : 'rgba(168,85,247,0.08)',
+                    boxShadow: `inset 0 0 0 1px ${key === 'kaizen' ? 'rgba(6,182,212,0.3)' : 'rgba(168,85,247,0.3)'}`
                   }} />
                 )}
-                <span className="relative capitalize">{tab === 'activities' ? 'Actividades' : 'Dashboard'}</span>
+                <span className="relative">{label}</span>
               </button>
             ))}
 
@@ -109,7 +118,8 @@ function App() {
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-8">
         <div className="animate-slide-up">
           {activeTab === 'activities' && <ActivityManagement currentUser={currentUser} />}
-          {activeTab === 'dashboard' && <Dashboard currentUser={currentUser} />}
+          {activeTab === 'dashboard'  && <Dashboard currentUser={currentUser} />}
+          {activeTab === 'kaizen'     && <KaizenHub currentUser={currentUser} />}
         </div>
       </main>
     </div>

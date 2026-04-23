@@ -1,43 +1,30 @@
+// =============================================================================
+// components/ActivityManagement.tsx — Gestión de actividades del usuario
+// =============================================================================
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { User } from './UserSelect';
-
-interface Activity {
-  id: string;
-  nameActivity: string;
-  durationActivity: number;
-  dateActivity: string;
-  categoryActivity: string;
-  userId: string;
-  impactPoints?: number;
-}
+import { CATEGORY_META } from '../constants/categories';
+import type { User, Activity } from '../types';
 
 interface ActivityManagementProps {
   currentUser: User;
 }
 
-const CATEGORY_META: Record<string, { label: string; emoji: string; badgeClass: string; color: string }> = {
-  STUDY: { label: 'Estudio',  emoji: '📚', badgeClass: 'badge-study', color: '#a855f7' },
-  GYM:   { label: 'Gym',     emoji: '🏋️', badgeClass: 'badge-gym',   color: '#06b6d4' },
-  REST:  { label: 'Descanso',emoji: '🌙', badgeClass: 'badge-rest',  color: '#10b981' },
-};
-
 export default function ActivityManagement({ currentUser }: ActivityManagementProps) {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [nameActivity, setNameActivity] = useState('');
+  const [activities, setActivities]         = useState<Activity[]>([]);
+  const [nameActivity, setNameActivity]     = useState('');
   const [durationActivity, setDurationActivity] = useState<number | ''>('');
-  const [dateActivity, setDateActivity] = useState('');
+  const [dateActivity, setDateActivity]     = useState('');
   const [categoryActivity, setCategoryActivity] = useState('STUDY');
-  const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loading, setLoading]               = useState(false);
+  const [fetchLoading, setFetchLoading]     = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
+  const [successMsg, setSuccessMsg]         = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
-      const activitiesData = await api.getActivities();
-      const userActivities = activitiesData.filter((a: Activity) => a.userId === currentUser.id);
-      setActivities(userActivities);
+      const data = await api.getActivities();
+      setActivities(data.filter((a: Activity) => a.userId === currentUser.id));
     } catch (err) {
       console.error(err);
       setError('Error al cargar actividades');
@@ -87,17 +74,18 @@ export default function ActivityManagement({ currentUser }: ActivityManagementPr
     }
   };
 
-  const totalPoints = activities.reduce((s, a) => s + (a.impactPoints || 0), 0);
+  const totalPoints  = activities.reduce((s, a) => s + (a.impactPoints || 0), 0);
   const totalMinutes = activities.reduce((s, a) => s + a.durationActivity, 0);
 
   return (
     <div className="space-y-6">
-      {/* Stats Row */}
+
+      {/* ── Stats Row ── */}
       <div className="grid grid-cols-3 gap-4 animate-slide-up">
         {[
-          { label: 'Actividades', value: activities.length, icon: '⚡', color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
-          { label: 'Minutos Totales', value: totalMinutes, icon: '⏱️', color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
-          { label: 'Puntos Totales', value: totalPoints, icon: '🏆', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+          { label: 'Actividades',    value: activities.length, icon: '⚡', color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
+          { label: 'Minutos Totales', value: totalMinutes,     icon: '⏱️', color: '#06b6d4', bg: 'rgba(6,182,212,0.12)'  },
+          { label: 'Puntos Totales', value: totalPoints,       icon: '🏆', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
         ].map(stat => (
           <div key={stat.label} className="glass-strong rounded-2xl p-5" style={{ border: `1px solid ${stat.color}25` }}>
             <div className="flex items-center justify-between mb-2">
@@ -109,7 +97,7 @@ export default function ActivityManagement({ currentUser }: ActivityManagementPr
         ))}
       </div>
 
-      {/* Form Card */}
+      {/* ── Create Form ── */}
       <div className="glass-strong rounded-2xl p-6 animate-slide-up delay-100" style={{ border: '1px solid rgba(168,85,247,0.2)' }}>
         <div className="flex items-center gap-3 mb-5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.3)' }}>
@@ -120,60 +108,30 @@ export default function ActivityManagement({ currentUser }: ActivityManagementPr
           <h2 className="font-semibold text-slate-200">Registrar Actividad</h2>
         </div>
 
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#fb7185' }}>
-            {error}
-          </div>
-        )}
-        {successMsg && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>
-            ✓ {successMsg}
-          </div>
-        )}
+        {error      && <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#fb7185' }}>{error}</div>}
+        {successMsg && <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>✓ {successMsg}</div>}
 
         <form onSubmit={handleCreateActivity} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div>
             <label className="block text-xs font-medium mb-2" style={{ color: 'rgba(148,163,184,0.7)' }}>Nombre</label>
-            <input
-              type="text" required minLength={3} maxLength={100}
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm"
-              value={nameActivity}
-              onChange={e => setNameActivity(e.target.value)}
-              placeholder="Ej. Leer un libro"
-            />
+            <input type="text" required minLength={3} maxLength={100} className="input-dark w-full rounded-xl px-4 py-2.5 text-sm" value={nameActivity} onChange={e => setNameActivity(e.target.value)} placeholder="Ej. Leer un libro" />
           </div>
           <div>
             <label className="block text-xs font-medium mb-2" style={{ color: 'rgba(148,163,184,0.7)' }}>Duración (min)</label>
-            <input
-              type="number" required min="1"
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm"
-              value={durationActivity}
-              onChange={e => setDurationActivity(Number(e.target.value))}
-              placeholder="Ej. 60"
-            />
+            <input type="number" required min="1" className="input-dark w-full rounded-xl px-4 py-2.5 text-sm" value={durationActivity} onChange={e => setDurationActivity(Number(e.target.value))} placeholder="Ej. 60" />
           </div>
           <div>
             <label className="block text-xs font-medium mb-2" style={{ color: 'rgba(148,163,184,0.7)' }}>Fecha</label>
-            <input
-              type="date" required
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm"
-              value={dateActivity}
-              onChange={e => setDateActivity(e.target.value)}
-            />
+            <input type="date" required className="input-dark w-full rounded-xl px-4 py-2.5 text-sm" value={dateActivity} onChange={e => setDateActivity(e.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-medium mb-2" style={{ color: 'rgba(148,163,184,0.7)' }}>Categoría</label>
-            <select
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm"
-              value={categoryActivity}
-              onChange={e => setCategoryActivity(e.target.value)}
-            >
+            <select className="input-dark w-full rounded-xl px-4 py-2.5 text-sm" value={categoryActivity} onChange={e => setCategoryActivity(e.target.value)}>
               {Object.entries(CATEGORY_META).map(([k, v]) => (
                 <option key={k} value={k}>{v.emoji} {v.label}</option>
               ))}
             </select>
           </div>
-
           <div className="sm:col-span-2 lg:col-span-4">
             <button type="submit" disabled={loading} className="btn-primary rounded-xl py-2.5 px-8 text-sm">
               {loading ? (
@@ -187,7 +145,7 @@ export default function ActivityManagement({ currentUser }: ActivityManagementPr
         </form>
       </div>
 
-      {/* Activities Table */}
+      {/* ── Activities Table ── */}
       <div className="glass-strong rounded-2xl overflow-hidden animate-slide-up delay-200" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <h3 className="font-semibold text-slate-200">Mis Actividades</h3>
@@ -219,37 +177,25 @@ export default function ActivityManagement({ currentUser }: ActivityManagementPr
               </thead>
               <tbody>
                 {activities.map((act, i) => {
-                  const meta = CATEGORY_META[act.categoryActivity] || { label: act.categoryActivity, emoji: '📌', badgeClass: 'badge-study' };
+                  const meta = CATEGORY_META[act.categoryActivity] ?? { label: act.categoryActivity, emoji: '📌', badgeClass: 'badge-study' };
                   return (
                     <tr key={act.id} className="table-row-hover transition-all border-t" style={{ borderColor: 'rgba(255,255,255,0.05)', animationDelay: `${i * 0.04}s` }}>
-                      <td className="py-3.5 px-5">
-                        <span className="font-medium text-slate-200 text-sm">{act.nameActivity}</span>
-                      </td>
+                      <td className="py-3.5 px-5"><span className="font-medium text-slate-200 text-sm">{act.nameActivity}</span></td>
                       <td className="py-3.5 px-5">
                         <span className={`${meta.badgeClass} inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium`}>
                           <span>{meta.emoji}</span>{meta.label}
                         </span>
                       </td>
                       <td className="py-3.5 px-5 text-sm text-slate-400">{act.durationActivity} min</td>
-                      <td className="py-3.5 px-5">
-                        <span className="text-sm font-bold" style={{ color: '#f59e0b' }}>{act.impactPoints ?? '—'}</span>
-                      </td>
+                      <td className="py-3.5 px-5"><span className="text-sm font-bold" style={{ color: '#f59e0b' }}>{act.impactPoints ?? '—'}</span></td>
                       <td className="py-3.5 px-5 text-sm text-slate-500">{new Date(act.dateActivity).toLocaleDateString()}</td>
                       <td className="py-3.5 px-5 text-right">
                         <button
                           onClick={() => handleDeleteActivity(act.id)}
                           className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
                           style={{ color: 'rgba(148,163,184,0.6)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.color = '#f43f5e';
-                            e.currentTarget.style.background = 'rgba(244,63,94,0.12)';
-                            e.currentTarget.style.borderColor = 'rgba(244,63,94,0.3)';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.color = 'rgba(148,163,184,0.6)';
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#f43f5e'; e.currentTarget.style.background = 'rgba(244,63,94,0.12)'; e.currentTarget.style.borderColor = 'rgba(244,63,94,0.3)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(148,163,184,0.6)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
                         >
                           Eliminar
                         </button>

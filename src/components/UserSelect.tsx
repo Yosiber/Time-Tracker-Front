@@ -1,11 +1,12 @@
+// =============================================================================
+// components/UserSelect.tsx — Pantalla de selección/creación de usuario
+// =============================================================================
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import type { User } from '../types';
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+// Re-exportamos User para que App.tsx no tenga que cambiar su import path
+export type { User } from '../types';
 
 interface UserSelectProps {
   onSelectUser: (user: User) => void;
