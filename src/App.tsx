@@ -10,58 +10,94 @@ function App() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <UserSelect onSelectUser={setCurrentUser} />
+      <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
+        {/* Aurora background */}
+        <div className="aurora-bg">
+          <div className="aurora-blob animate-aurora" style={{ width: '600px', height: '600px', background: '#a855f7', top: '-10%', left: '-10%' }} />
+          <div className="aurora-blob animate-aurora delay-300" style={{ width: '500px', height: '500px', background: '#06b6d4', bottom: '-10%', right: '-5%' }} />
+          <div className="aurora-blob animate-aurora delay-500" style={{ width: '400px', height: '400px', background: '#7c3aed', top: '40%', left: '40%' }} />
+        </div>
+        {/* Subtle grid */}
+        <div className="absolute inset-0 z-0 opacity-[0.03]" style={{
+          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }} />
+        <div className="relative z-10 w-full">
+          <UserSelect onSelectUser={setCurrentUser} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary text-white p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/-2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Aurora background always present */}
+      <div className="aurora-bg">
+        <div className="aurora-blob animate-aurora" style={{ width: '700px', height: '700px', background: '#a855f7', top: '-20%', left: '-15%' }} />
+        <div className="aurora-blob animate-aurora delay-400" style={{ width: '600px', height: '600px', background: '#06b6d4', bottom: '-20%', right: '-10%' }} />
+      </div>
+      <div className="absolute inset-0 z-0 opacity-[0.025]" style={{
+        backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+        backgroundSize: '40px 40px'
+      }} />
+
+      {/* HEADER */}
+      <header className="relative z-20 glass-strong sticky top-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          {/* Logo + User pill */}
+          <div className="flex items-center gap-5">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-xl btn-primary flex items-center justify-center animate-pulse-glow">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
               </div>
-              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-dark hidden sm:block">
-                TimeTracker
-              </h1>
+              <span className="text-lg font-800 gradient-text hidden sm:block tracking-tight">TimeTracker</span>
             </div>
-            
-            <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
-            
-            <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
-              <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
+
+            <div className="hidden sm:block w-px h-6" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass" style={{ border: '1px solid rgba(168,85,247,0.25)' }}>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                style={{ background: 'linear-gradient(135deg, #a855f7, #06b6d4)' }}>
                 {currentUser.name.charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium text-gray-700">{currentUser.name}</span>
+              <span className="text-sm font-medium text-slate-200">{currentUser.name}</span>
             </div>
           </div>
-          
+
+          {/* Navigation */}
           <nav className="flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('activities')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'activities' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Actividades
-            </button>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'dashboard' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Dashboard
-            </button>
-            <div className="h-6 w-px bg-gray-200 mx-1"></div>
+            {(['activities', 'dashboard'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="relative px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
+                style={{
+                  color: activeTab === tab ? '#c084fc' : 'rgba(148,163,184,0.8)',
+                  background: activeTab === tab ? 'rgba(168,85,247,0.15)' : 'transparent',
+                }}
+              >
+                {activeTab === tab && (
+                  <span className="absolute inset-0 rounded-lg" style={{
+                    background: 'rgba(168,85,247,0.08)',
+                    boxShadow: 'inset 0 0 0 1px rgba(168,85,247,0.3)'
+                  }} />
+                )}
+                <span className="relative capitalize">{tab === 'activities' ? 'Actividades' : 'Dashboard'}</span>
+              </button>
+            ))}
+
+            <div className="w-px h-5 mx-1" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
             <button
               onClick={() => setCurrentUser(null)}
-              className="text-sm font-medium text-gray-500 hover:text-red-500 px-2 py-2 transition-colors"
-              title="Cambiar de usuario"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
+              style={{ color: 'rgba(148,163,184,0.7)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#f43f5e')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(148,163,184,0.7)')}
             >
               Salir
             </button>
@@ -69,8 +105,9 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+      {/* MAIN */}
+      <main className="relative z-10 max-w-6xl mx-auto px-6 py-8">
+        <div className="animate-slide-up">
           {activeTab === 'activities' && <ActivityManagement currentUser={currentUser} />}
           {activeTab === 'dashboard' && <Dashboard currentUser={currentUser} />}
         </div>

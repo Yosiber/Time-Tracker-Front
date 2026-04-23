@@ -6,95 +6,187 @@ interface DashboardProps {
   currentUser: User;
 }
 
+interface Activity {
+  userId: string;
+  dateActivity: string;
+  impactPoints?: number;
+  categoryActivity: string;
+}
+
+const calculateVerdict = (points: number): { text: string; emoji: string; color: string; description: string } => {
+  if (points <= 0)  return { text: 'Sin actividad', emoji: '😴', color: '#64748b', description: 'No hay actividades para esta fecha.' };
+  if (points <= 100) return { text: 'Día flojo',      emoji: '😐', color: '#f59e0b', description: 'Puedes hacer más. ¡Mañana será mejor!' };
+  if (points <= 400) return { text: 'Día equilibrado',emoji: '💪', color: '#06b6d4', description: '¡Buen balance! Sigue así.' };
+  return { text: 'Alto rendimiento', emoji: '🔥', color: '#a855f7', description: '¡Rendimiento excepcional! ¡Eres imparable!' };
+};
+
+const CATEGORY_COLORS: Record<string, string> = { STUDY: '#a855f7', GYM: '#06b6d4', REST: '#10b981' };
+
 export default function Dashboard({ currentUser }: DashboardProps) {
   const [date, setDate] = useState('');
-  const [points, setPoints] = useState<number | null>(null);
-  const [verdict, setVerdict] = useState<string | null>(null);
+  const [results, setResults] = useState<{
+    points: number;
+    verdict: ReturnType<typeof calculateVerdict>;
+    byCategory: { name: string; points: number; count: number; color: string }[];
+    totalActivities: number;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const calculateVerdict = (totalPoints: number) => {
-    if (totalPoints <= 100) return "Día flojo";
-    if (totalPoints <= 400) return "Día equilibrado";
-    return "Alto rendimiento";
-  };
 
   const handleConsult = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date) return;
-
     setLoading(true);
     setError(null);
     try {
-      // Obtenemos todas las actividades y filtramos localmente para no alterar el backend
-      const activities = await api.getActivities();
-      
-      const userActivitiesOnDate = activities.filter((act: any) => {
-        // Filtrar por usuario activo
+      const activities: Activity[] = await api.getActivities();
+      const filtered = activities.filter(act => {
         if (act.userId !== currentUser.id) return false;
-        
-        // Filtrar por fecha (asumiendo que act.dateActivity es ISO string tipo YYYY-MM-DDTHH:mm:ss)
-        // Compararemos solo la parte de la fecha YYYY-MM-DD
         const actDate = act.dateActivity.split('T')[0];
         return actDate === date;
       });
 
-      // Sumar puntos
-      const totalPoints = userActivitiesOnDate.reduce((sum: number, act: any) => sum + (act.impactPoints || 0), 0);
-      
-      setPoints(totalPoints);
-      setVerdict(calculateVerdict(totalPoints));
+      const totalPoints = filtered.reduce((s, a) => s + (a.impactPoints || 0), 0);
+
+      // Group by category
+      const catMap: Record<string, { points: number; count: number }> = {};
+      for (const act of filtered) {
+        if (!catMap[act.categoryActivity]) catMap[act.categoryActivity] = { points: 0, count: 0 };
+        catMap[act.categoryActivity].points += act.impactPoints || 0;
+        catMap[act.categoryActivity].count++;
+      }
+      const byCategory = Object.entries(catMap).map(([name, data]) => ({
+        name,
+        ...data,
+        color: CATEGORY_COLORS[name] ?? '#94a3b8',
+      }));
+
+      setResults({
+        points: totalPoints,
+        verdict: calculateVerdict(totalPoints),
+        byCategory,
+        totalActivities: filtered.length,
+      });
     } catch (err) {
       console.error(err);
-      setError('Error al consultar datos para la fecha seleccionada.');
-      setPoints(null);
-      setVerdict(null);
+      setError('Error al consultar los datos.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Mi Dashboard Diario</h2>
+  const maxCategoryPoints = results ? Math.max(...results.byCategory.map(c => c.points), 1) : 1;
 
-      {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-          {error}
+  return (
+    <div className="space-y-6">
+      {/* Title */}
+      <div className="animate-slide-up">
+        <h2 className="text-2xl font-bold text-slate-200 mb-1">Mi Dashboard</h2>
+        <p className="text-sm text-slate-500">Consulta tu rendimiento del día</p>
+      </div>
+
+      {/* Date selector */}
+      <div className="glass-strong rounded-2xl p-6 animate-slide-up delay-100" style={{ border: '1px solid rgba(168,85,247,0.2)' }}>
+        <form onSubmit={handleConsult} className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-medium mb-2" style={{ color: 'rgba(148,163,184,0.7)' }}>Selecciona una fecha</label>
+            <input
+              type="date"
+              required
+              className="input-dark w-full rounded-xl px-4 py-3 text-sm"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading || !date}
+            className="btn-primary rounded-xl px-8 py-3 text-sm whitespace-nowrap"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin-slow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeOpacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                Consultando...
+              </span>
+            ) : '🔍 Ver resultados'}
+          </button>
+        </form>
+
+        {error && (
+          <div className="mt-4 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#fb7185' }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Results */}
+      {results && (
+        <div className="space-y-4 animate-scale-in">
+          {/* Verdict Hero */}
+          <div className="glass-strong rounded-2xl p-8 text-center relative overflow-hidden" style={{ border: `1px solid ${results.verdict.color}30` }}>
+            <div className="absolute inset-0 opacity-10 pointer-events-none"
+              style={{ background: `radial-gradient(ellipse at center, ${results.verdict.color} 0%, transparent 70%)` }} />
+
+            <div className="text-6xl mb-4">{results.verdict.emoji}</div>
+            <div className="text-5xl font-800 mb-2" style={{ color: results.verdict.color }}>
+              {results.points} pts
+            </div>
+            <div className="text-xl font-semibold text-slate-200 mb-2">{results.verdict.text}</div>
+            <div className="text-sm text-slate-400">{results.verdict.description}</div>
+          </div>
+
+          {/* Quick stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="glass rounded-2xl p-5 text-center" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="text-3xl font-bold mb-1" style={{ color: '#06b6d4' }}>{results.totalActivities}</div>
+              <div className="text-xs text-slate-500 uppercase tracking-wider">Actividades</div>
+            </div>
+            <div className="glass rounded-2xl p-5 text-center" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="text-3xl font-bold mb-1" style={{ color: '#10b981' }}>
+                {results.byCategory.length}
+              </div>
+              <div className="text-xs text-slate-500 uppercase tracking-wider">Categorías</div>
+            </div>
+          </div>
+
+          {/* Category Breakdown */}
+          {results.byCategory.length > 0 && (
+            <div className="glass-strong rounded-2xl p-6" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <h3 className="text-sm font-semibold text-slate-300 mb-5 uppercase tracking-wider">Desglose por categoría</h3>
+              <div className="space-y-4">
+                {results.byCategory.map(cat => {
+                  const catEmoji = cat.name === 'STUDY' ? '📚' : cat.name === 'GYM' ? '🏋️' : '🌙';
+                  const pct = Math.round((cat.points / maxCategoryPoints) * 100);
+                  return (
+                    <div key={cat.name}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-slate-300 flex items-center gap-2">
+                          <span>{catEmoji}</span>
+                          <span className="font-medium">{cat.name}</span>
+                          <span className="text-xs text-slate-600">× {cat.count}</span>
+                        </span>
+                        <span className="text-sm font-bold" style={{ color: cat.color }}>{cat.points} pts</span>
+                      </div>
+                      <div className="progress-bar-track h-2">
+                        <div
+                          className="progress-bar-fill"
+                          style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${cat.color}aa, ${cat.color})` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      <form onSubmit={handleConsult} className="flex gap-4 mb-8 items-end max-w-md">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha a consultar</label>
-          <input
-            type="date"
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading || !date}
-          className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 h-[42px]"
-        >
-          {loading ? 'Consultando...' : 'Consultar'}
-        </button>
-      </form>
-
-      {points !== null && verdict !== null && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-purple-50 rounded-xl p-6 border border-purple-100 flex flex-col items-center justify-center text-center">
-            <span className="text-purple-600 font-medium mb-2 text-sm uppercase tracking-wider">Puntos del Día</span>
-            <span className="text-4xl font-bold text-purple-900">{points}</span>
-          </div>
-          
-          <div className="bg-blue-50 rounded-xl p-6 border border-blue-100 flex flex-col items-center justify-center text-center">
-            <span className="text-blue-600 font-medium mb-2 text-sm uppercase tracking-wider">Veredicto</span>
-            <span className="text-xl font-semibold text-blue-900">{verdict}</span>
-          </div>
+      {/* Empty state */}
+      {!results && !loading && (
+        <div className="glass rounded-2xl p-12 text-center animate-fade-in" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="text-5xl mb-4 animate-float">📅</div>
+          <p className="text-slate-400">Selecciona una fecha para ver tu rendimiento</p>
         </div>
       )}
     </div>
