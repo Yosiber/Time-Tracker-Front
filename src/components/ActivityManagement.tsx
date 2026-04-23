@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-
-interface User {
-  id: string;
-  name: string;
-}
+import type { User } from './UserSelect';
 
 interface Activity {
   id: string;
@@ -15,28 +11,28 @@ interface Activity {
   userId: string;
 }
 
-export default function ActivityManagement() {
+interface ActivityManagementProps {
+  currentUser: User;
+}
+
+export default function ActivityManagement({ currentUser }: ActivityManagementProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   
   // Form state
   const [nameActivity, setNameActivity] = useState('');
   const [durationActivity, setDurationActivity] = useState<number | ''>('');
   const [dateActivity, setDateActivity] = useState('');
   const [categoryActivity, setCategoryActivity] = useState('STUDY');
-  const [userId, setUserId] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
-      const [activitiesData, usersData] = await Promise.all([
-        api.getActivities(),
-        api.getUsers()
-      ]);
-      setActivities(activitiesData);
-      setUsers(usersData);
+      const activitiesData = await api.getActivities();
+      // Filter activities for the current user only
+      const userActivities = activitiesData.filter((a: Activity) => a.userId === currentUser.id);
+      setActivities(userActivities);
     } catch (err) {
       console.error(err);
       setError('Error al cargar datos');
@@ -45,18 +41,15 @@ export default function ActivityManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentUser.id]); // re-fetch if user changes
 
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!durationActivity || !userId) return;
+    if (!durationActivity) return;
 
     setLoading(true);
     setError(null);
     try {
-      // Assuming dateActivity is in 'YYYY-MM-DD' format, backend expects LocalDateTime
-      // So appending 'T00:00:00' to match LocalDateTime parsing, if necessary.
-      // Often just 'YYYY-MM-DD' fails if the backend expects time as well. Let's send a full ISO string or at least midnight time.
       const formattedDate = dateActivity.includes('T') ? dateActivity : `${dateActivity}T00:00:00`;
       
       await api.createActivity({
@@ -64,14 +57,13 @@ export default function ActivityManagement() {
         durationActivity: Number(durationActivity),
         dateActivity: formattedDate,
         categoryActivity,
-        userId
+        userId: currentUser.id // Use the injected user ID
       });
       
       setNameActivity('');
       setDurationActivity('');
       setDateActivity('');
       setCategoryActivity('STUDY');
-      setUserId('');
       fetchData();
     } catch (err) {
       console.error(err);
@@ -93,7 +85,7 @@ export default function ActivityManagement() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Gestión de Actividades</h2>
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">Mis Actividades</h2>
       
       {error && (
         <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
@@ -101,13 +93,16 @@ export default function ActivityManagement() {
         </div>
       )}
 
-      <form onSubmit={handleCreateActivity} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 items-end">
+      <form onSubmit={handleCreateActivity} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 items-end bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div className="lg:col-span-4 mb-2">
+          <h3 className="text-sm font-semibold text-gray-700">Registrar nueva actividad</h3>
+        </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
           <input
             type="text"
             required
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
             value={nameActivity}
             onChange={(e) => setNameActivity(e.target.value)}
             placeholder="Ej. Leer un libro"
@@ -116,31 +111,31 @@ export default function ActivityManagement() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Duración (min)</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Duración (min)</label>
           <input
             type="number"
             required
             min="1"
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
             value={durationActivity}
             onChange={(e) => setDurationActivity(Number(e.target.value))}
             placeholder="Ej. 60"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Fecha</label>
           <input
             type="date"
             required
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
             value={dateActivity}
             onChange={(e) => setDateActivity(e.target.value)}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Categoría</label>
           <select
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white text-sm"
             value={categoryActivity}
             onChange={(e) => setCategoryActivity(e.target.value)}
           >
@@ -149,35 +144,17 @@ export default function ActivityManagement() {
             <option value="REST">REST</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-          <select
-            required
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          >
-            <option value="" disabled>Seleccione un usuario</option>
-            {users.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
-        </div>
         
-        <button
-          type="submit"
-          disabled={loading || users.length === 0}
-          className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 h-[42px]"
-        >
-          {loading ? 'Guardando...' : 'Crear Actividad'}
-        </button>
+        <div className="lg:col-span-4 mt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 text-sm"
+          >
+            {loading ? 'Guardando...' : 'Guardar Actividad'}
+          </button>
+        </div>
       </form>
-
-      {users.length === 0 && !loading && (
-        <p className="text-sm text-orange-600 mb-4">
-          Crea primero un usuario para poder registrar actividades.
-        </p>
-      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -193,8 +170,8 @@ export default function ActivityManagement() {
           <tbody>
             {activities.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-gray-500">
-                  No hay actividades registradas
+                <td colSpan={5} className="py-8 text-center text-gray-500">
+                  No tienes actividades registradas aún.
                 </td>
               </tr>
             ) : (

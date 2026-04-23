@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { api } from '../services/api';
+import type { User } from './UserSelect';
 
-export default function Dashboard() {
+interface DashboardProps {
+  currentUser: User;
+}
+
+export default function Dashboard({ currentUser }: DashboardProps) {
   const [date, setDate] = useState('');
   const [points, setPoints] = useState<number | null>(null);
   const [verdict, setVerdict] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const calculateVerdict = (totalPoints: number) => {
+    if (totalPoints <= 100) return "Día flojo";
+    if (totalPoints <= 400) return "Día equilibrado";
+    return "Alto rendimiento";
+  };
 
   const handleConsult = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,13 +26,24 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      // Backend expects standard LocalDate formatting YYYY-MM-DD
-      const [pointsRes, verdictRes] = await Promise.all([
-        api.getDailyPoints(date),
-        api.getDailyVerdict(date)
-      ]);
-      setPoints(pointsRes);
-      setVerdict(verdictRes);
+      // Obtenemos todas las actividades y filtramos localmente para no alterar el backend
+      const activities = await api.getActivities();
+      
+      const userActivitiesOnDate = activities.filter((act: any) => {
+        // Filtrar por usuario activo
+        if (act.userId !== currentUser.id) return false;
+        
+        // Filtrar por fecha (asumiendo que act.dateActivity es ISO string tipo YYYY-MM-DDTHH:mm:ss)
+        // Compararemos solo la parte de la fecha YYYY-MM-DD
+        const actDate = act.dateActivity.split('T')[0];
+        return actDate === date;
+      });
+
+      // Sumar puntos
+      const totalPoints = userActivitiesOnDate.reduce((sum: number, act: any) => sum + (act.impactPoints || 0), 0);
+      
+      setPoints(totalPoints);
+      setVerdict(calculateVerdict(totalPoints));
     } catch (err) {
       console.error(err);
       setError('Error al consultar datos para la fecha seleccionada.');
@@ -34,7 +56,7 @@ export default function Dashboard() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Dashboard Diario</h2>
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">Mi Dashboard Diario</h2>
 
       {error && (
         <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
